@@ -2,7 +2,16 @@ include("../../ida-cmake/cmake/IDA.cmake")
 
 set(sources plugin.cpp python.cpp dialogs.cpp)
 
+# Folder-layout install: <prefix>/plugins/ifred/{ida_palette64.*,
+# ida-plugin.json}. IDA 9.x loads folder plugins via the manifest next to
+# the binary, and the plugin keeps its writable data (palette/config.json,
+# palette/theme/) beside it.
+set(IDA_PLUGIN_INSTALL_SUBDIR "ifred" CACHE STRING "" FORCE)
+
 add_ida_plugin(ida_palette ${sources})
+
+install(FILES "${CMAKE_SOURCE_DIR}/ida-plugin.json"
+        DESTINATION plugins/${IDA_PLUGIN_INSTALL_SUBDIR})
 
 # Date-stamped version, refreshed on every configure. Deliberate: releases are
 # stamped with their build date. Shown in the About dialog and embedded into

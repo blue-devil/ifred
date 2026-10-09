@@ -11,4 +11,5 @@ CMakeSettings\.json
 Qt/*
 build/*
 ida-sdk*
-scripts/*
+scripts/
+build_*

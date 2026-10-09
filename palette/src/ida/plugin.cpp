@@ -25,8 +25,11 @@
 #define NAME_PALETTE_SHORTCUT "Meta+P"
 #endif
 
-#ifdef __MAC__
+#if defined(__MAC__) || defined(__LINUX__)
 #include <dlfcn.h>
+#endif
+
+#ifdef __MAC__
 bool mac_dlopen_workaround() {
   Dl_info res;
   if (dladdr(&PLUGIN, &res) == 0) {
@@ -650,9 +653,14 @@ static void schedule_menu_install() {
 struct ui_listener_t : event_listener_t {
   ssize_t idaapi on_event(ssize_t code, va_list) override {
     switch (code) {
+      // Every event that can precede or cause an Edit>Plugins regeneration -
+      // including opening a database (ui_database_inited), which regenerates
+      // the menu AFTER our startup install and used to wipe the submenu with
+      // nothing re-triggering a rebuild (seen on macOS).
       case ui_ready_to_run:
       case ui_plugin_loaded:
       case ui_plugin_unloading:
+      case ui_database_inited:
         schedule_menu_install();
         break;
       default:
@@ -679,6 +687,54 @@ char help[] = "IDA palette";
 
 char wanted_name[] = "ifred";
 
+// Directory containing this loaded plugin module. IDA dlopen()s plugins, so
+// this resolves to <plugins>/ifred no matter which of the two plugin
+// locations IDA loaded us from (the IDA installation's plugins/ or the user
+// directory, e.g. ~/.idapro/plugins). The palette's writable data
+// (config.json, theme/) is kept beside the binary.
+static QString ModuleDir() {
+#if defined(__NT__)
+  char path[MAX_PATH] = {};
+  HMODULE module = nullptr;
+  if (!GetModuleHandleExA(
+          GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+              GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+          (LPCSTR)&ModuleDir, &module) ||
+      !GetModuleFileNameA(module, path, sizeof(path))) {
+    return QString();
+  }
+  return QFileInfo(QString::fromLocal8Bit(path)).absolutePath();
+#elif defined(__MAC__) || defined(__LINUX__)
+  Dl_info info;
+  if (dladdr((void*)&ModuleDir, &info) == 0 || info.dli_fname == nullptr) {
+    return QString();
+  }
+  return QFileInfo(QString::fromLocal8Bit(info.dli_fname)).absolutePath();
+#else
+  return QString();
+#endif
+}
+
+// Recursively copy src into dst (dst is created). Existing files are not
+// overwritten - QFile::copy fails on them, which callers treat as an error.
+static bool CopyRecursive(const QString& src, const QString& dst) {
+  QDir src_dir(src);
+  if (!src_dir.exists()) return false;
+  if (!QDir().mkpath(dst)) return false;
+
+  const QFileInfoList entries =
+      src_dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot);
+  for (const QFileInfo& entry : entries) {
+    const QString dst_path = dst + "/" + entry.fileName();
+    if (entry.isDir()) {
+      if (!CopyRecursive(entry.absoluteFilePath(), dst_path)) return false;
+    } else if (!QFile::copy(entry.absoluteFilePath(), dst_path)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 QString IdaPluginPath(const char* filename) {
   static QString g_plugin_path;
   if (g_plugin_path.size()) {
@@ -686,11 +742,35 @@ QString IdaPluginPath(const char* filename) {
     return r;
   }
 
-  g_plugin_path = QString(get_user_idadir()) + "/plugins/palette/";
+  // Data lives next to the plugin binary: <plugins>/ifred/palette/. When the
+  // module path can't be resolved, fall back to the legacy location in the
+  // user directory.
+  const QString module_dir = ModuleDir();
+  g_plugin_path = module_dir.isEmpty()
+                      ? QString(get_user_idadir()) + "/plugins/palette/"
+                      : module_dir + "/palette/";
   QDir plugin_dir(g_plugin_path);
   plugin_dir.mkpath(".");
 
   return g_plugin_path + filename;
+}
+
+// One-time migration from the pre-folder layout: the palette data used to
+// live in <user idadir>/plugins/palette/. If that directory still exists and
+// the new location has no config.json yet, carry the user's settings and
+// themes over. The old directory is never touched.
+static void MigrateLegacyPaletteData() {
+  const QString legacy_dir = QString(get_user_idadir()) + "/plugins/palette";
+  if (!QDir(legacy_dir).exists()) return;
+  if (QFile::exists(pluginPath("config.json"))) return;
+
+  if (!CopyRecursive(legacy_dir, pluginPath(""))) {
+    msg("ifred: could not migrate settings from %s (folder not writable?)\n",
+        legacy_dir.toLocal8Bit().constData());
+    return;
+  }
+  msg("ifred: migrated settings from %s\n",
+      legacy_dir.toLocal8Bit().constData());
 }
 
 #if IDA_SDK_VERSION >= 750
@@ -715,6 +795,10 @@ INIT_RETURN_TYPE idaapi init() {
 
   // 2. init theme path handler
   set_path_handler(IdaPluginPath);
+
+  // 2.5 carry over data from the pre-folder layout, before anything reads
+  // or seeds config/theme files
+  MigrateLegacyPaletteData();
 
   if (!register_action(command_palette_action)) {
     msg("command palette action loading error\n");
