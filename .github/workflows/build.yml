@@ -293,12 +293,15 @@ jobs:
 
       - name: Create plugin package
         run: |
-          mkdir -p package
-          cp ida-plugin.json package/
-          cp artifacts/ifred-linux-64/*.so package/
-          cp artifacts/ifred-windows-64/*.dll package/
-          cp artifacts/ifred-macos-arm64/*.dylib package/
-          cd package && zip -r ../ifred-plugin.zip .
+          # Folder-plugin layout: the zip contains a single ifred/ directory
+          # with the manifest next to the binaries - exactly what IDA 9.x
+          # loads from <idadir>/plugins/ (and what hcli installs).
+          mkdir -p package/ifred
+          cp ida-plugin.json package/ifred/
+          cp artifacts/ifred-linux-64/*.so package/ifred/
+          cp artifacts/ifred-windows-64/*.dll package/ifred/
+          cp artifacts/ifred-macos-arm64/*.dylib package/ifred/
+          cd package && zip -r ../ifred-plugin.zip ifred
 
       - name: Upload plugin package
         uses: actions/upload-artifact@v4

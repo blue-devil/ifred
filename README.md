@@ -94,7 +94,9 @@ int main() {
 ## Changing theme
 
 You can copy css, json files from `palette/res/theme/<name>/*` to
-`%APPDATA%/Hex-rays/IDA Pro/plugins/palette/theme/`, like the existing
+`<plugins>/ifred/palette/theme/` - the plugin folder, either in the IDA
+installation's plugins directory or the user one (e.g.
+`%APPDATA%/Hex-Rays/IDA Pro/plugins/ifred/palette/theme/`), like the existing
 css, json files.
 
 ayu white:
@@ -113,8 +115,8 @@ solarized dark:
   * [x] Map ready
 * [ ] Is `standalone` working, check this
 * [ ] Custom palette using IDAPython does it still working?
-* [ ] Make the plugin reside in its folder `ifred`, not directly in `plugins` folder
-* [ ] Create proper `ida-plugin.json`
+* [x] Make the plugin reside in its folder `ifred`, not directly in `plugins` folder
+* [x] Create proper `ida-plugin.json`
 
 [01]: ./assets/screenshots/1.png
 [02]: ./assets/screenshots/2.png

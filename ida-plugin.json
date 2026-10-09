@@ -1,8 +1,8 @@
 {
-  "IDAMetadataDescriptorVersion": 2,
+  "IDAMetadataDescriptorVersion": 1,
   "plugin": {
     "name": "ifred",
-    "version": "2026.09.03",
+    "version": "2026.10.09",
     "description": "IDA command palette & more",
     "entryPoint": "ida_palette64",
     "authors": [

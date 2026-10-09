@@ -1,5 +1,37 @@
 # Changelog
 
+## [2026-10-09][2026.10.09]
+
+### Changed
+
+* The plugin now installs self-contained into an `ifred/` folder instead of
+  loose files: `<plugins>/ifred/{ida_palette64.*, ida-plugin.json}` - the
+  folder-plugin layout IDA 9.x loads via the manifest. `<plugins>` is either
+  the IDA installation's plugins directory or the user directory
+  (`~/.idapro/plugins`, `%APPDATA%/Hex-Rays/IDA Pro/plugins`)
+* The writable data moved next to the binary:
+  `<plugins>/ifred/palette/{config.json, theme/}` (was
+  `<user idadir>/plugins/palette/`). On first run the old location is
+  migrated automatically; the old folder is left in place
+* `cmake --install` / `build.py` install into `plugins/ifred/` (new
+  `IDA_PLUGIN_INSTALL_SUBDIR` option in the ida-cmake submodule)
+* CI `ifred-plugin.zip` now contains the `ifred/` folder layout (manifest
+  next to the binaries) instead of loose files
+* `ida-plugin.json`: `IDAMetadataDescriptorVersion` downgraded 2 → 1 - IDA
+  9.4's local plugin loader rejects descriptor v2 manifests with
+  "unsupported IDAMetadataDescriptorVersion value" and skips the plugin
+
+### Fixed
+
+* `Edit > Plugins > ifred` submenu disappeared after opening a database on
+  macOS: the menu rebuild now also triggers on `ui_database_inited`, the event
+  that precedes IDA's Plugins-menu regeneration on database open
+
+### Upgrade notes
+
+* Remove any old loose `plugins/ida_palette64.*` - IDA loads both the old and
+  the new copy otherwise
+
 ## [2026-09-03][2026.09.03]
 
 ### Added
@@ -91,7 +123,8 @@ This release is just a rebuilt for IDA Pro v9.3
 * IDA Pro v9.0 support
 * Prebuilt binaries provided
 
-[2026.09.03]: https://github.com/blue-devil/ifred/compare/v2026.02.16...HEAD
+[2026.10.09]: https://github.com/blue-devil/ifred/compare/v2026.09.03...HEAD
+[2026.09.03]: https://github.com/blue-devil/ifred/compare/v2026.02.16...v2026.09.03
 [2026.02.16]: https://github.com/blue-devil/ifred/compare/v2025.12.10...v2026.02.16
 [2025.12.10]: https://github.com/blue-devil/ifred/compare/v2025.09.14...v2025.12.10
 [2025.09.14]: https://github.com/blue-devil/ifred/compare/v2024.10.29...v2025.09.14

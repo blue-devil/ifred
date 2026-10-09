@@ -6,8 +6,8 @@
          :/bundle/ifred-banner.png -->
     <file alias="ifred-banner.png">../../assets/ifred-banner-896x280.png</file>
     <!-- Bundled themes. Every directory here is compiled into the plugin and
-         seeded into the user's plugins/palette/theme/ folder on first run
-         (never overwriting), so it shows up in the theme selector.
+         seeded into <plugins>/ifred/palette/theme/ (next to the binary) on
+         first run (never overwriting), so it shows up in the theme selector.
          We ship only these four: "dark" (the default, see
          PALETTE_DEFAULT_THEME) and "light", plus solarized dark/light. The
          other themes under res/theme/ (ayu*, gitkraken*) are kept in the repo
